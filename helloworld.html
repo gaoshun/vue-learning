@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title></title>
+        <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+        
+        <script type="text/javascript">
+            Vue.component('todo-item', {
+                props: ['todo'],
+                template: '<li>{{ todo.text }}</li>'
+            });
+        </script>
+    </head>
+    <body>
+        <div id="app">
+            {{message}}
+        </div>
+
+        <div id="app-2">
+            <span v-bind:title="message">
+                鼠标悬停
+            </span>
+        </div>
+
+        <div id="app-3">
+            <p v-if="seen">显示</p>
+        </div>
+
+        <div id="app-4">
+            <ol>
+                <li v-for="todo in todos">
+                    {{ todo.text }}
+                </li>
+            </ol>
+        </div>
+        
+        <div id="app-5">
+            <p> {{ message }}</p>
+            <button v-on:click="reverseMessage">反转</button>
+        </div>
+        
+        <div id="app-6">
+            <p>{{ message }}</p>
+            <input v-model="message" />
+        </div>
+        
+        <div id="app-7">
+            <ol>
+                <todo-item 
+                v-for="item in gList" 
+                v-bind:todo="item" 
+                v-bind:key="item.id"></todo-item>
+            </ol>
+        </div>
+    </body>
+
+    <script type="text/javascript">
+        var app = new Vue({
+            el: '#app',
+            data: {
+                message: 'Hello Vue!'
+            }
+        });
+
+        var app2 = new Vue({
+            el: '#app-2',
+            data: {
+                message: `页面加载于${new Date().toLocaleString()}`
+            }
+        });
+
+        var app3 = new Vue({
+            el: '#app-3',
+            data: {
+                seen: false
+            }
+        });
+
+        var app4 = new Vue({
+            el: '#app-4',
+            data: {
+                todos: [{
+                        text: 'learning'
+                    },
+                    {
+                        text: 'Vue.js'
+                    }
+                ]
+            }
+        });
+        
+        var app5 = new Vue({
+            el: '#app-5',
+            data: {
+                message: 'Learnig Vue.js'
+            },
+            methods: {
+                reverseMessage: function(){
+                    this.message = this.message.split('').reverse().join('');
+                }
+            }
+        });
+        
+        var app6 = new Vue({
+            el: '#app-6',
+            data: {
+                message: 'Learning Vue.js'
+            }
+        });
+        
+        var app7 = new Vue({
+            el: '#app-7',
+            data: {
+                gList: [
+                    {id: 0, text: '蔬菜'},
+                    {id: 1, text: '水果'},
+                    {id: 2, text: '蛋糕'}
+                ]
+            }
+        })
+    </script>
+</html>
