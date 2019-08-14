@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Search</title>
+
+    <script type="text/javascript" src="https://cdn.staticfile.org/babel-polyfill/7.4.4/polyfill.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <!-- <script type="text/javascript" src="http://vuejs.org/js/vue.min.js"></script> -->
+    <link rel="stylesheet" href="https://cdn.staticfile.org/element-ui/2.11.1/theme-chalk/index.css">
+    <script src="https://cdn.staticfile.org/element-ui/2.11.1/index.js"></script>
+
+    <style type="text/css">
+        /* 去掉按钮的边框 */
+        .filter-button {
+            border: none;
+        }
+
+        .filter-button:focus {
+            box-shadow: none;
+            -webkit-box-shadow: none;
+        }
+
+        /* 修改筛选条件的样式 */
+        .filter_conditions {
+            background-color: #fff;
+            border-bottom: #f6f6f6 1px solid;
+            /* box-shadow: 0 3px 3px #888888; */
+        }
+
+        .filter_conditions .filter_label_row {
+            margin-top: 20px;
+        }
+
+        .filter_conditions .filter_label {
+            color: #706e6e4f
+        }
+
+        .model_list {
+            /* margin: 2%; */
+        }
+
+        .model_list li {
+            margin-top: 10px;
+        }
+
+        .model_list .model_desc {
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            padding: 3px 10px;
+        }
+
+        body ul {
+            list-style: none;
+            padding: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <el-row :gutter="20">
+            <el-col :span="18" :offset="2">
+                <el-input v-model="search_text" prefix-icon="el-icon-search" placeholder="search model..."
+                    @on-search="getModels" />
+            </el-col>
+            <el-col :span="2">
+                <el-button class="filter-button" round icon="el-icon-s-operation" @click="showFilter = !showFilter">
+                </el-button>
+            </el-col>
+        </el-row>
+
+        <div v-show="showFilter" id="filter_conditions" class="filter_conditions" style="display: none">
+            <el-row class="filter_label_row">
+                <el-col :span="10" :offset="1">
+                    <span class="filter_label">CATEGORIES</span>
+                </el-col>
+                <el-col :span="10" :offset="2">
+                    <span class="filter_label">DATE</span>
+                </el-col>
+            </el-row>
+            <el-row align="middle">
+                <el-col :span="10" :offset="1">
+                    <el-select v-model="selected_category" placeholder="All categories" @change="getModels">
+                        <el-option v-for="category in categories" :value="category.value" :key="category.value"
+                            :label="category.text"></el-option>
+                    </el-select>
+                </el-col>
+                <el-col :span="10" :offset="2">
+                    <el-select v-model="selected_time" placeholder="All Time" @change="getModels">
+                        <el-option v-for="time in times" :value="time.value" :key="time.value" :label="time.text">
+                        </el-option>
+                    </el-select>
+                </el-col>
+            </el-row>
+            <el-row class="filter_label_row">
+                <el-col :span="10" :offset="1">
+                    <span class="filter_label">OTHERS</span>
+                </el-col>
+                <el-col :span="10" :offset="2">
+                    <span class="filter_label">SORT BY</span>
+                </el-col>
+            </el-row>
+            <el-row align="middle">
+                <el-col :span="10" :offset="1">
+                    <el-select v-model="selected_other" placeholder="Other" multiple collapse-tags @change="getModels">
+                        <el-option v-for="other in others" :value="other.value" :key="other.value" :label="other.text">
+                        </el-option>
+                    </el-select>
+                </el-col>
+                <el-col :span="10" :offset="2">
+                    <el-select v-model="selected_sort" placeholder="Relevance" @change="getModels">
+                        <el-option v-for="item in sortItems" :value="item.value" :key="item.value" :label="item.text">
+                        </el-option>
+                    </el-select>
+                </el-col>
+            </el-row>
+        </div>
+
+        <div class="model_list">
+            <!-- <ul v-loading="loading">
+                <li v-for="(model_row, i) in models" :key="i">
+                    <el-row :gutter="10">
+                        <el-col :span="6" v-for="model in model_row" :key="model.uid">
+                            <el-card :body-style="{ padding: '0px', cursor: 'pointer' }">
+                                <el-image :src="model.thumUrl" fit="contain">
+                                    <div slot="placeholder">
+                                        <el-image src="1024.jpg" fit="contain"></el-image>
+                                    </div>
+                                </el-image>
+                                <div class="model_desc">
+                                    <span :title="model.name">{{ model.name }}</span>
+                                </div>
+                            </el-card>
+                        </el-col>
+                    </el-row>
+                </li>
+            </ul> -->
+            <el-card v-for="(model, i) in models" :key="i" :body-style="{ padding: '0px', cursor: 'pointer', width: cardWidth+'px', height: cardHeight+'px' }" style="float: left">
+                <el-image :src="getThumbnailsUrl(model.thumbnails.images)" fit="contain">
+                    <div slot="placeholder">
+                        <el-image src="1024.jpg" fit="contain"></el-image>
+                    </div>
+                </el-image>
+                <div class="model_desc">
+                    <span :title="model.name">{{ model.name }}</span>
+                </div>
+            </el-card>
+        </div>
+    </div>
+
+    <script>
+        var app = new Vue({
+            el: '#app',
+            data: {
+                search_text: '',
+                showFilter: false,
+                categories: [
+                    {
+                        text: 'All categories',
+                        value: 'all'
+                    }, {
+                        text: 'Animals & Pets',
+                        value: 'animals-pets'
+                    }, {
+                        text: 'Architecture',
+                        value: 'architecture'
+                    }, {
+                        text: 'Art & Abstract',
+                        value: 'art-abstract'
+                    }, {
+                        text: 'Cars & vehicles',
+                        value: 'cars-vehicles'
+                    }, {
+                        text: 'Characters & Creatures',
+                        value: 'characters-creatures'
+                    }, {
+                        text: 'Cultural Heritage & History',
+                        value: 'cultural-heritage-history'
+                    }, {
+                        text: 'Electronics & Gadgets',
+                        value: 'electronics-gadgets'
+                    }, {
+                        text: 'Fashion & Style',
+                        value: 'fashion-styles'
+                    }, {
+                        text: 'Food & Drink',
+                        value: 'food-drink'
+                    }, {
+                        text: 'Furniture & Home',
+                        value: 'furniture-home'
+                    }, {
+                        text: 'Music',
+                        value: 'music'
+                    }, {
+                        text: 'Nature & Plants',
+                        value: 'nature-plants'
+                    }, {
+                        text: 'News & Politics',
+                        value: 'news-politics'
+                    }, {
+                        text: 'People',
+                        value: 'people'
+                    }, {
+                        text: 'Places & Travel',
+                        value: 'places-travel'
+                    }, {
+                        text: 'Science & Technology',
+                        value: 'science-technology'
+                    }, {
+                        text: 'Sports & Fitness',
+                        value: 'sports-fitness'
+                    }, {
+                        text: 'Weapons & Military',
+                        value: 'weapons-military'
+                    }
+                ],
+                times: [
+                    {
+                        text: 'All Time',
+                        value: 'all'
+                    }, {
+                        text: 'This month',
+                        value: '31'
+                    }, {
+                        text: 'This week',
+                        value: '7'
+                    }, {
+                        text: 'This day',
+                        value: '1'
+                    }
+                ],
+                others: [
+                    {
+                        text: 'Downloadable',
+                        value: 'downloadable'
+                    }, {
+                        text: 'Animated',
+                        value: 'animated'
+                    }, {
+                        text: 'Staff picks',
+                        value: 'staffpicks'
+                    }, {
+                        text: 'Sound',
+                        value: 'sound'
+                    }],
+                sortItems: [
+                    {
+                        text: 'Relevance',
+                        value: '-pertinence'
+                    }, {
+                        text: 'Most liked',
+                        value: '-likeCount'
+                    }, {
+                        text: 'Most viewed',
+                        value: '-viewCount'
+                    }, {
+                        text: 'Most recent',
+                        value: '-publishedAt'
+                    }
+                ],
+                selected_category: 'all',
+                selected_time: 'all',
+                selected_other: [],
+                selected_sort: '-pertinence',
+
+                models: [],
+                next_url: '',
+                loadDistance: -50,
+                screenHeight: document.documentElement.clientHeight,
+                screenWidth: document.documentElement.clientWidth,
+                cardWidth: 0,
+                cardHeight: 0,
+                loading: false,
+                cancel: null,
+            },
+            created: function () {
+                this.getModels();
+            },
+            mounted: function () {
+                var _this = this;
+                window.onresize = function () { // 定义窗口大小变更通知事件
+                    _this.screenHeight = document.documentElement.clientHeight; //窗口高度
+                    _this.screenWidth = document.documentElement.clientWidth;
+
+                    var scale = 1.25;
+                    var row_num = 1;
+                    if(_this.screenWidth > 1100) {
+                        row_num = 4;
+                    } else if (_this.screenWidth > 800) {
+                        row_num = 3;
+                    } else if (_this.screenWidth > 480) {
+                        row_num = 2;
+                    } else {
+                        row_num = 1
+                    }
+                    _this.cardWidth = (_this.screenWidth - 11 * row_num * 2) / row_num;
+                    _this.cardHeight = _this.cardWidth / scale;
+                };
+            },
+            watch: {
+                
+            },
+            computed: {
+                
+            },
+            methods: {
+                getUrl: function () {
+                    var url = 'https://api.sketchfab.com/v3/search?type=models&q=' + this.search_text + '&sort_by=' + this.selected_sort;
+                    if (this.selected_category != 'all') {
+                        url += '&categories=' + this.selected_category;
+                    }
+                    if (this.selected_time != 'all') {
+                        url += '&date=' + this.selected_time;
+                    }
+                    for (var i in this.selected_other) {
+                        url += '&' + this.selected_other[i] + '=true';
+                    }
+                    return url;
+                },
+
+                requestData: function (url) {
+                    console.log(url);
+                    let _this = this;
+                    if (_this.cancel) {
+                        _this.cancel();
+                    }
+                    let CancelToken = axios.CancelToken;
+                    return axios.get(url, {
+                        cancelToken: new CancelToken(function executor(c) {
+                            _this.cancel = c
+                            // 这个参数 c 就是CancelToken构造函数里面自带的取消请求的函数，这里把该函数当参数用
+                        })
+                    });
+                },
+
+                getModels: function () {
+                    var _this = this;
+                    _this.loading = true;
+                    var url = _this.getUrl();
+                    return this.requestData(url)
+                        .then(function (response) {
+                            _this.next_url = response.data.next;
+                            // _this.models = _this.formatData(response.data.results);
+                            _this.models = response.data.results;
+                        })
+                        .catch(function (error) {
+                            if (error.message) {
+                                console.log(error);
+                            }
+                        })
+                        .finally(function () {
+                            _this.loading = false;
+                        });
+                },
+
+                load: function () {
+                    var _this = this;
+                    this.requestData(this.next_url)
+                        .then(function (response) {
+                            _this.next_url = response.data.next;
+                            // _this.models = _this.models.concat(_this.formatData(response.data.results));
+                            _this.models = _this.models.concat(response.data.results);
+                        })
+                        .catch(function (error) {
+                            console.log(error);
+                        });
+                },
+
+                getThumbnailsUrl: function (images) { // 取分辨率最大的图片用作缩略图
+                    let maxWidth = 0;
+                    let url = '';
+                    for (var index in images) {
+                        var img = images[index];
+                        if (img.width > maxWidth) {
+                            url = img.url;
+                            maxWidth = img.width;
+                        }
+                    }
+                    return url;
+                },
+
+                formatData: function (data) {
+                    var _this = this;
+                    return data.reduce((pre, next, idx) => { // reduce 用来便利数组，具体语法就 rtfm 吧
+                        next.thumUrl = _this.getThumbnailsUrl(next.thumbnails.images);
+                        const inner = pre[~~(idx / 4)]               // ~~用来取整，inner 是内层数组
+                        if (inner !== undefined) {                   // 判断有没有内层数组
+                            inner.push(next)                           // 如果有就把遍历的值 next push 到内层数组里
+                        } else {
+                            pre.push([next])                           // 没有就新建一个包含 next 的数组，作为内层数组
+                        }
+                        return pre
+                    }, [[]]);
+                },
+            }
+        });
+    </script>
+</body>
+
+</html>
