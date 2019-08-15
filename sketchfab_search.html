@@ -14,6 +14,9 @@
     <script src="https://cdn.staticfile.org/element-ui/2.11.1/index.js"></script>
 
     <style type="text/css">
+        body {
+            overflow-x: hidden;
+        }
         /* 去掉按钮的边框 */
         .filter-button {
             border: none;
@@ -26,13 +29,18 @@
 
         /* 修改筛选条件的样式 */
         .filter_conditions {
-            background-color: #fff;
-            border-bottom: #f6f6f6 1px solid;
+            width: 90%;
+            margin: 5px 5%;
+            box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 12px 0px;
+            padding-bottom: 10px;
+            border-radius: 4px;
+            /* background-color: #fff;
+            border-bottom: #f6f6f6 1px solid; */
             /* box-shadow: 0 3px 3px #888888; */
         }
 
         .filter_conditions .filter_label_row {
-            margin-top: 20px;
+            padding-top: 10px;
         }
 
         .filter_conditions .filter_label {
@@ -40,7 +48,7 @@
         }
 
         .model_list {
-            /* margin: 2%; */
+            margin-top: 20px;
         }
 
         .model_list li {
@@ -51,7 +59,8 @@
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
-            padding: 3px 10px;
+            padding: 12px;
+            height: 24px;
         }
 
         body ul {
@@ -121,29 +130,15 @@
             </el-row>
         </div>
 
-        <div class="model_list">
-            <!-- <ul v-loading="loading">
-                <li v-for="(model_row, i) in models" :key="i">
-                    <el-row :gutter="10">
-                        <el-col :span="6" v-for="model in model_row" :key="model.uid">
-                            <el-card :body-style="{ padding: '0px', cursor: 'pointer' }">
-                                <el-image :src="model.thumUrl" fit="contain">
-                                    <div slot="placeholder">
-                                        <el-image src="1024.jpg" fit="contain"></el-image>
-                                    </div>
-                                </el-image>
-                                <div class="model_desc">
-                                    <span :title="model.name">{{ model.name }}</span>
-                                </div>
-                            </el-card>
-                        </el-col>
-                    </el-row>
-                </li>
-            </ul> -->
-            <el-card v-for="(model, i) in models" :key="i" :body-style="{ padding: '0px', cursor: 'pointer', width: cardWidth+'px', height: cardHeight+'px' }" style="float: left">
-                <el-image :src="getThumbnailsUrl(model.thumbnails.images)" fit="contain">
+        <div class="model_list" v-loading="loading">
+            <el-card v-for="(model, i) in models" :key="i"
+                :body-style="{ padding: '0px', cursor: 'pointer', width: cardWidth+'px' }"
+                style="float: left;margin: 0 11px;margin-bottom: 22px;">
+                <el-image :src="getThumbnailsUrl(model.thumbnails.images)" fit="cover"
+                    v-bind:style="{height: cardHeight+'px'}">
                     <div slot="placeholder">
-                        <el-image src="1024.jpg" fit="contain"></el-image>
+                        <el-image src="1024.jpg" fit="cover
+                        " v-bind:style="{height: cardHeight+'px'}"></el-image>
                     </div>
                 </el-image>
                 <div class="model_desc">
@@ -271,10 +266,8 @@
                 models: [],
                 next_url: '',
                 loadDistance: -50,
-                screenHeight: document.documentElement.clientHeight,
-                screenWidth: document.documentElement.clientWidth,
-                cardWidth: 0,
-                cardHeight: 0,
+                screenHeight: document.body.clientHeight,
+                screenWidth: document.body.clientWidth,
                 loading: false,
                 cancel: null,
             },
@@ -282,31 +275,33 @@
                 this.getModels();
             },
             mounted: function () {
-                var _this = this;
                 window.onresize = function () { // 定义窗口大小变更通知事件
-                    _this.screenHeight = document.documentElement.clientHeight; //窗口高度
-                    _this.screenWidth = document.documentElement.clientWidth;
+                    this.screenHeight = document.documentElement.clientHeight; //窗口高度
+                    this.screenWidth = document.documentElement.clientWidth;
+                }.bind(this);
+            },
+            watch: {
 
-                    var scale = 1.25;
+            },
+            computed: {
+                cardWidth: function () {
+                    var domWidth = this.screenWidth + 15;
                     var row_num = 1;
-                    if(_this.screenWidth > 1100) {
+                    if (domWidth > 1100) {
                         row_num = 4;
-                    } else if (_this.screenWidth > 800) {
+                    } else if (domWidth > 800) {
                         row_num = 3;
-                    } else if (_this.screenWidth > 480) {
+                    } else if (domWidth > 480) {
                         row_num = 2;
                     } else {
                         row_num = 1
                     }
-                    _this.cardWidth = (_this.screenWidth - 11 * row_num * 2) / row_num;
-                    _this.cardHeight = _this.cardWidth / scale;
-                };
-            },
-            watch: {
-                
-            },
-            computed: {
-                
+                    return (domWidth - 40 - 11 * row_num * 2) / row_num;
+                },
+                cardHeight: function () {
+                    var scale = 1.7;
+                    return this.cardWidth / scale
+                },
             },
             methods: {
                 getUrl: function () {
@@ -345,8 +340,8 @@
                     return this.requestData(url)
                         .then(function (response) {
                             _this.next_url = response.data.next;
-                            // _this.models = _this.formatData(response.data.results);
                             _this.models = response.data.results;
+                            _this.loading = false;
                         })
                         .catch(function (error) {
                             if (error.message) {
@@ -354,7 +349,7 @@
                             }
                         })
                         .finally(function () {
-                            _this.loading = false;
+                            
                         });
                 },
 
@@ -363,7 +358,6 @@
                     this.requestData(this.next_url)
                         .then(function (response) {
                             _this.next_url = response.data.next;
-                            // _this.models = _this.models.concat(_this.formatData(response.data.results));
                             _this.models = _this.models.concat(response.data.results);
                         })
                         .catch(function (error) {
