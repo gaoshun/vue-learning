@@ -9,14 +9,26 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
     <script type="text/javascript" src="https://unpkg.com/axios/dist/axios.min.js"></script>
 
-    <!-- <script type="text/javascript" src="http://vuejs.org/js/vue.min.js"></script> -->
+    <!-- import iview -->
+    <link rel="stylesheet" type="text/css" href="http://unpkg.com/iview/dist/styles/iview.css">
+    <script type="text/javascript" src="http://unpkg.com/iview/dist/iview.min.js"></script>
+
     <link rel="stylesheet" href="https://cdn.staticfile.org/element-ui/2.11.1/theme-chalk/index.css">
     <script src="https://cdn.staticfile.org/element-ui/2.11.1/index.js"></script>
 
     <style type="text/css">
         body {
-            overflow-x: hidden;
+            overflow: hidden;
         }
+
+        .search_topbar {
+            position: fixed;
+            z-index: 999;
+            background-color: #fff;
+            width: 100%;
+            padding: 10px;
+        }
+
         /* 去掉按钮的边框 */
         .filter-button {
             border: none;
@@ -34,9 +46,10 @@
             box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 12px 0px;
             padding-bottom: 10px;
             border-radius: 4px;
-            /* background-color: #fff;
-            border-bottom: #f6f6f6 1px solid; */
-            /* box-shadow: 0 3px 3px #888888; */
+            position: fixed;
+            z-index: 1000;
+            background-color: #fff;
+            top: 53px;
         }
 
         .filter_conditions .filter_label_row {
@@ -48,7 +61,8 @@
         }
 
         .model_list {
-            margin-top: 20px;
+            position: relative;
+            top: 70px;
         }
 
         .model_list li {
@@ -60,7 +74,7 @@
             white-space: nowrap;
             text-overflow: ellipsis;
             padding: 12px;
-            height: 24px;
+            /* height: 24px; */
         }
 
         body ul {
@@ -72,10 +86,10 @@
 
 <body>
     <div id="app">
-        <el-row :gutter="20">
+        <el-row :gutter="20" class="search_topbar">
             <el-col :span="18" :offset="2">
                 <el-input v-model="search_text" prefix-icon="el-icon-search" placeholder="search model..."
-                    @on-search="getModels" />
+                    @change="getModels" />
             </el-col>
             <el-col :span="2">
                 <el-button class="filter-button" round icon="el-icon-s-operation" @click="showFilter = !showFilter">
@@ -130,22 +144,23 @@
             </el-row>
         </div>
 
-        <div class="model_list" v-loading="loading">
-            <el-card v-for="(model, i) in models" :key="i"
+        <scroll class="model_list" :height="scrollHeight" :on-reach-bottom="load" :distance-to-edge="-10">
+            <el-card shadow="hover" v-for="(model, i) in models" :key="i"
                 :body-style="{ padding: '0px', cursor: 'pointer', width: cardWidth+'px' }"
-                style="float: left;margin: 0 11px;margin-bottom: 22px;">
+                style="float: left;margin: 0 11px;margin-bottom: 22px;"
+                @click="selectMode">
                 <el-image :src="getThumbnailsUrl(model.thumbnails.images)" fit="cover"
                     v-bind:style="{height: cardHeight+'px'}">
                     <div slot="placeholder">
-                        <el-image src="1024.jpg" fit="cover
-                        " v-bind:style="{height: cardHeight+'px'}"></el-image>
+                        <el-image src="public/image/model_default.jpg" fit="cover
+                        " v-bind:style="{height: cardHeight+'px', width: cardWidth+'px'}"></el-image>
                     </div>
                 </el-image>
                 <div class="model_desc">
                     <span :title="model.name">{{ model.name }}</span>
                 </div>
             </el-card>
-        </div>
+        </scroll>
     </div>
 
     <script>
@@ -266,9 +281,8 @@
                 models: [],
                 next_url: '',
                 loadDistance: -50,
-                screenHeight: document.body.clientHeight,
-                screenWidth: document.body.clientWidth,
-                loading: false,
+                screenWidth: document.documentElement.clientWidth,
+                screenHeight: document.documentElement.clientHeight,
                 cancel: null,
             },
             created: function () {
@@ -281,7 +295,8 @@
                 }.bind(this);
             },
             watch: {
-
+                showFilter: function (newValue, oldValue){
+                },
             },
             computed: {
                 cardWidth: function () {
@@ -302,6 +317,10 @@
                     var scale = 1.7;
                     return this.cardWidth / scale
                 },
+
+                scrollHeight: function () {
+                    return this.screenHeight - 70;
+                }
             },
             methods: {
                 getUrl: function () {
@@ -320,49 +339,57 @@
 
                 requestData: function (url) {
                     console.log(url);
-                    let _this = this;
-                    if (_this.cancel) {
-                        _this.cancel();
+                    if (this.cancel) {
+                        this.cancel();
                     }
                     let CancelToken = axios.CancelToken;
                     return axios.get(url, {
                         cancelToken: new CancelToken(function executor(c) {
-                            _this.cancel = c
+                            this.cancel = c
                             // 这个参数 c 就是CancelToken构造函数里面自带的取消请求的函数，这里把该函数当参数用
-                        })
+                        }.bind(this))
                     });
                 },
 
                 getModels: function () {
-                    var _this = this;
-                    _this.loading = true;
-                    var url = _this.getUrl();
+                    this.$Loading.start();
+                    var url = this.getUrl();
                     return this.requestData(url)
                         .then(function (response) {
-                            _this.next_url = response.data.next;
-                            _this.models = response.data.results;
-                            _this.loading = false;
-                        })
+                            this.next_url = response.data.next;
+                            this.models = response.data.results;
+                            this.$Loading.finish();
+                        }.bind(this))
                         .catch(function (error) {
                             if (error.message) {
                                 console.log(error);
+                                this.showErrorMsg();
+                                this.$Loading.error();
                             }
                         })
                         .finally(function () {
-                            
+
                         });
                 },
 
                 load: function () {
-                    var _this = this;
-                    this.requestData(this.next_url)
-                        .then(function (response) {
-                            _this.next_url = response.data.next;
-                            _this.models = _this.models.concat(response.data.results);
-                        })
-                        .catch(function (error) {
-                            console.log(error);
-                        });
+                    if (this.next_url) {
+                        return this.requestData(this.next_url)
+                            .then(function (response) {
+                                this.next_url = response.data.next;
+                                this.models = this.models.concat(response.data.results);
+                            }.bind(this))
+                            .catch(function (error) {
+                                if(error.message) {
+                                    console.log(error);
+                                    this.showErrorMsg();
+                                }
+                            }.bind(this));
+                    }
+                },
+
+                selectMode: function(params) {
+                    console.log('select', params);
                 },
 
                 getThumbnailsUrl: function (images) { // 取分辨率最大的图片用作缩略图
@@ -376,6 +403,15 @@
                         }
                     }
                     return url;
+                },
+
+                showErrorMsg: function (msg) {
+                    this.$message({
+                        showClose: true,
+                        message: msg || '数据获取错误，请检查网络后再试',
+                        type: 'error',
+                        center: true
+                    });
                 },
 
                 formatData: function (data) {
