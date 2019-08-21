@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Search</title>
 
     <script type="text/javascript" src="https://cdn.staticfile.org/babel-polyfill/7.4.4/polyfill.min.js"></script>
@@ -89,7 +90,7 @@
         <el-row :gutter="20" class="search_topbar">
             <el-col :span="18" :offset="2">
                 <el-input v-model="search_text" prefix-icon="el-icon-search" placeholder="search model..."
-                    @change="getModels" />
+                    @change="getModels"></el-input>
             </el-col>
             <el-col :span="2">
                 <el-button class="filter-button" round icon="el-icon-s-operation" @click="showFilter = !showFilter">
@@ -144,11 +145,10 @@
             </el-row>
         </div>
 
-        <scroll class="model_list" :height="scrollHeight" :on-reach-bottom="load" :distance-to-edge="-10">
+        <scroll class="model_list" :height="scrollHeight" :style="{width: scrollWidth}" :on-reach-bottom="load" :distance-to-edge="-10">
             <el-card shadow="hover" v-for="(model, i) in models" :key="i"
                 :body-style="{ padding: '0px', cursor: 'pointer', width: cardWidth+'px' }"
-                style="float: left;margin: 0 11px;margin-bottom: 22px;"
-                @click="selectMode">
+                style="float: left;margin: 0 11px;margin-bottom: 22px;" @click="selectMode">
                 <el-image :src="getThumbnailsUrl(model.thumbnails.images)" fit="cover"
                     v-bind:style="{height: cardHeight+'px'}">
                     <div slot="placeholder">
@@ -295,7 +295,7 @@
                 }.bind(this);
             },
             watch: {
-                showFilter: function (newValue, oldValue){
+                showFilter: function (newValue, oldValue) {
                 },
             },
             computed: {
@@ -320,6 +320,9 @@
 
                 scrollHeight: function () {
                     return this.screenHeight - 70;
+                },
+                scrollWidth: function (){
+                    return this.screenWidth;
                 }
             },
             methods: {
@@ -380,7 +383,7 @@
                                 this.models = this.models.concat(response.data.results);
                             }.bind(this))
                             .catch(function (error) {
-                                if(error.message) {
+                                if (error.message) {
                                     console.log(error);
                                     this.showErrorMsg();
                                 }
@@ -388,7 +391,7 @@
                     }
                 },
 
-                selectMode: function(params) {
+                selectMode: function (params) {
                     console.log('select', params);
                 },
 
@@ -416,7 +419,7 @@
 
                 formatData: function (data) {
                     var _this = this;
-                    return data.reduce((pre, next, idx) => { // reduce 用来便利数组，具体语法就 rtfm 吧
+                    return data.reduce(function (pre, next, idx) { // reduce 用来便利数组，具体语法就 rtfm 吧
                         next.thumUrl = _this.getThumbnailsUrl(next.thumbnails.images);
                         const inner = pre[~~(idx / 4)]               // ~~用来取整，inner 是内层数组
                         if (inner !== undefined) {                   // 判断有没有内层数组
